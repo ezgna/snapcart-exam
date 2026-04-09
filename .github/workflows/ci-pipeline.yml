@@ -1,4 +1,3 @@
-# lint → test → build-and-push（試験どおり3ジョブ・順序制御）
 name: CI Pipeline
 
 on:
@@ -76,7 +75,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # GHCR のイメージ名は小文字に揃える
       - name: Prepare lowercase image name
         run: echo "IMAGE_NAME_LC=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
