@@ -1,0 +1,90 @@
+# lint → test → build-and-push（試験どおり3ジョブ・順序制御）
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start app in background
+        run: |
+          node server.js &
+          echo $! > /tmp/app.pid
+
+      - name: Wait for /health
+        run: npx wait-on http://localhost:3000/health --timeout 60000
+
+      - name: Run tests
+        run: npm test
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [ -f /tmp/app.pid ]; then kill $(cat /tmp/app.pid) || true; fi
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: [test]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GHCR のイメージ名は小文字に揃える
+      - name: Prepare lowercase image name
+        run: echo "IMAGE_NAME_LC=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ github.sha }}

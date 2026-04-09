@@ -1,0 +1,21 @@
+{
+  "name": "snapcart-exam",
+  "version": "1.0.0",
+  "description": "DevOps final — SnapCart Docker & CI/CD",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node health.test.js",
+    "lint": "eslint ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "wait-on": "^8.0.1"
+  }
+}
